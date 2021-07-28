@@ -73,6 +73,7 @@ setuptools.setup(
         "packaging >= 14.3",
         "google-cloud-storage >= 1.32.0, < 2.0.0dev",
         "google-cloud-bigquery >= 1.15.0, < 3.0.0dev",
+        "google-cloud-scheduler >= 2.0.0"
     ),
     extras_require={
         "full": full_extra_require,

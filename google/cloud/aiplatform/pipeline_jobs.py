@@ -26,6 +26,8 @@ from google.cloud.aiplatform import initializer
 from google.cloud.aiplatform import utils
 from google.cloud.aiplatform.utils import json_utils
 from google.cloud.aiplatform.utils import pipeline_utils
+from google.cloud.scheduler_v1.services.cloud_scheduler import CloudSchedulerClient
+from google.cloud.scheduler_v1.types.job import Job
 from google.protobuf import json_format
 
 from google.cloud.aiplatform.compat.types import (
@@ -264,6 +266,31 @@ class PipelineJob(base.VertexAiResourceNounWithFutureManager):
         _LOGGER.info("View Pipeline Job:\n%s" % self._dashboard_uri())
 
         self._block_until_complete()
+
+    def schedule(
+        self,
+        schedule: str,
+        time_zone: str = 'US/Pacific',
+    ) -> dict:
+        """Creates schedule for the configured PipelineJob.
+
+        Args:
+            schedule (str):
+                Required. Specifies the schedule in cron format. Example: "45 * * * *"
+            time_zone (str):
+                Required. Specifies the time zone for the schedule. Default is 'US/Pacific'.
+
+        Returns:
+            Created Google Cloud Scheduler Job object dictionary.
+        """
+        cs_client = CloudSchedulerClient(credentials=self.credentials)
+
+        job = cs_client.create_job(
+          request=None,
+          parent=self._parent,
+          job=self._gca_resource,
+        )
+        return job
 
     @property
     def pipeline_spec(self):
