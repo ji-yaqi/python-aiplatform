@@ -63,9 +63,10 @@ class PipelineRuntimeConfigBuilder(object):
             .get("inputDefinitions", {})
             .get("parameters", {})
         )
-        parameter_types = {k: v["type"] for k, v in parameter_input_definitions.items()}
+        # 'type' is deprecated in IR and change to 'parameterType'.
+        parameter_types = {k: v.get("type") or v.get("parameterType") for k, v in parameter_input_definitions.items()}
 
-        pipeline_root = runtime_config_spec.get("gcs_output_directory")
+        pipeline_root = runtime_config_spec.get("gcsOutputDirectory")
         parameter_values = _parse_runtime_parameters(runtime_config_spec)
         return cls(pipeline_root, parameter_types, parameter_values)
 
@@ -103,7 +104,7 @@ class PipelineRuntimeConfigBuilder(object):
                 "compile time, or when calling the service."
             )
         return {
-            "gcs_output_directory": self._pipeline_root,
+            "gcsOutputDirectory": self._pipeline_root,
             "parameters": {
                 k: self._get_vertex_value(k, v)
                 for k, v in self._parameter_values.items()
@@ -137,6 +138,7 @@ class PipelineRuntimeConfigBuilder(object):
                 "The pipeline parameter {} is not found in the "
                 "pipeline job input definitions.".format(name)
             )
+        print('name', name, 'value', value)
 
         result = {}
         if self._parameter_types[name] == "INT":
@@ -159,19 +161,18 @@ def _parse_runtime_parameters(
     Raises:
         TypeError: if the parameter type is not one of 'INT', 'DOUBLE', 'STRING'.
     """
-    runtime_parameters = runtime_config_spec.get("parameters")
-    if not runtime_parameters:
-        return None
+    # 'parameters' are deprecated in IR and changed to 'parameterValues'.
+    if runtime_config_spec.get("parameters") is not None:
+        result = {}
+        for name, value in runtime_config_spec.get("parameters").items():
+            if "intValue" in value:
+                result[name] = int(value["intValue"])
+            elif "doubleValue" in value:
+                result[name] = float(value["doubleValue"])
+            elif "stringValue" in value:
+                result[name] = value["stringValue"]
+            else:
+                raise TypeError("Got unknown type of value: {}".format(value))
+        return result
 
-    result = {}
-    for name, value in runtime_parameters.items():
-        if "intValue" in value:
-            result[name] = int(value["intValue"])
-        elif "doubleValue" in value:
-            result[name] = float(value["doubleValue"])
-        elif "stringValue" in value:
-            result[name] = value["stringValue"]
-        else:
-            raise TypeError("Got unknown type of value: {}".format(value))
-
-    return result
+    return runtime_config_spec.get("parameterValues")
